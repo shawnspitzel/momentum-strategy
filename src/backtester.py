@@ -286,33 +286,28 @@ class BacktestEngine():
         return sp500
 
     def plot_results(self, portfolio_history: pd.DataFrame, filename='backtest_results.png'):
-        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 12))
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
 
         # fetch S&P 500 benchmark
         start_date = portfolio_history.index[0]
         end_date = portfolio_history.index[-1]
         sp500 = self.fetch_sp500(start_date, end_date)
-
+        
         initial_portfolio_value = portfolio_history['value'].iloc[0]
-        portfolio_normalized = (portfolio_history['value'] / initial_portfolio_value) * 100
-
         sp500_aligned = sp500.reindex(portfolio_history.index, method='ffill')
-        sp500_normalized = (sp500_aligned / sp500_aligned.iloc[0]) * 100
+        sp500_scaled = (sp500_aligned / sp500_aligned.iloc[0]) * initial_portfolio_value
 
-        ax1.plot(portfolio_history.index, portfolio_normalized, label='Momentum Strategy', linewidth=2)
-        ax1.plot(portfolio_history.index, sp500_normalized, label='S&P 500', linewidth=2, alpha=0.7)
-        ax1.set_title('Strategy vs S&P 500 (Normalized to 100)')
+        ax1.plot(portfolio_history.index, portfolio_history['value'],
+                label='Momentum Strategy', linewidth=2, color='green')
+        ax1.plot(portfolio_history.index, sp500_scaled,
+                label='S&P 500', linewidth=2, alpha=0.7, color='blue')
+        ax1.set_title('Portfolio Value: Strategy vs S&P 500')
         ax1.set_xlabel('Date')
-        ax1.set_ylabel('Value (Starting = 100)')
+        ax1.set_ylabel('Portfolio Value ($)')
         ax1.legend()
         ax1.grid(True, alpha=0.3)
 
-        ax2.plot(portfolio_history.index, portfolio_history['value'], color='green', linewidth=2)
-        ax2.set_title('Portfolio Value Over Time')
-        ax2.set_xlabel('Date')
-        ax2.set_ylabel('Portfolio Value ($)')
-        ax2.grid(True, alpha=0.3)
-
+        # calculate & plot drawdowns
         portfolio_returns = portfolio_history['value'].pct_change().dropna()
         portfolio_cumulative = (1 + portfolio_returns).cumprod()
         portfolio_running_max = portfolio_cumulative.expanding().max()
@@ -322,27 +317,26 @@ class BacktestEngine():
         sp500_cumulative = (1 + sp500_returns).cumprod()
         sp500_running_max = sp500_cumulative.expanding().max()
         sp500_drawdown = (sp500_cumulative / sp500_running_max) - 1
-
-        ax3.fill_between(portfolio_drawdown.index, portfolio_drawdown * 100, 0,
+        ax2.fill_between(portfolio_drawdown.index, portfolio_drawdown * 100, 0,
                          alpha=0.3, color='red', label='Momentum Strategy')
-        ax3.plot(portfolio_drawdown.index, portfolio_drawdown * 100, color='red', linewidth=2)
+        ax2.plot(portfolio_drawdown.index, portfolio_drawdown * 100, color='red', linewidth=2)
 
-        ax3.fill_between(sp500_drawdown.index, sp500_drawdown * 100, 0,
+        ax2.fill_between(sp500_drawdown.index, sp500_drawdown * 100, 0,
                          alpha=0.2, color='blue', label='S&P 500')
-        ax3.plot(sp500_drawdown.index, sp500_drawdown * 100, color='blue',
+        ax2.plot(sp500_drawdown.index, sp500_drawdown * 100, color='blue',
                  linewidth=2, alpha=0.7, linestyle='--')
 
-        ax3.set_title('Drawdown Comparison')
-        ax3.set_xlabel('Date')
-        ax3.set_ylabel('Drawdown (%)')
-        ax3.legend()
-        ax3.grid(True, alpha=0.3)
+        ax2.set_title('Drawdown Comparison')
+        ax2.set_xlabel('Date')
+        ax2.set_ylabel('Drawdown (%)')
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
 
         plt.tight_layout()
 
+        # output
         output_path = os.path.join('outputs', filename)
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
         fig.savefig(output_path, dpi=300, bbox_inches='tight')
         print(f"Plot saved to {output_path}")
         plt.show()
