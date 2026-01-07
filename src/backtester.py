@@ -14,7 +14,8 @@ class DataHandler():
         ssl._create_default_https_context = ssl._create_unverified_context
         
         url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
-        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+        # can prob change this header depending on your device, a bit hacky here
+        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'} 
         
         tickers = pd.read_html(url, storage_options=headers)[0]['Symbol']
         df_ = pd.read_html(url, storage_options=headers)[1]
@@ -48,7 +49,7 @@ class DataHandler():
                 missing_count = df.isna().sum()
                 missing_pct = missing_count / len(df)
 
-                if missing_pct < 0.05 and len(df) >= 252:  # filter inadequate data
+                if missing_pct < 0.05 and len(df) >= 252:  # filter inadequate data, can benefit from additional tuning
                     prices.append(df)
                     symbols.append(symbol)
                 
@@ -73,13 +74,12 @@ class DataHandler():
         # Keep only valid tickers
         all_prices = all_prices[valid_tickers]
         monthly_returns = monthly_returns[valid_tickers]
-
-        print(f"\nData Summary:")
+        print()
+        print("Data Summary:")
         print(f"  Total tickers after filtering: {len(valid_tickers)}")
         print(f"  Date range: {all_prices.index[0]} to {all_prices.index[-1]}")
         print(f"  Monthly returns range: {monthly_returns.index[0]} to {monthly_returns.index[-1]}")
-        print(f"  Total months: {len(monthly_returns)}")
-
+        print(f"  Total months: {len(monthly_returns)}\n")
         return all_prices, monthly_returns
     
 class Broker():
@@ -88,19 +88,16 @@ class Broker():
         self.total_cash = investment
         self.price_data = price_data
         self.holdings = {}
-        self._preprocess_price_data()
+        self.preprocess_price_data()
 
-    def _preprocess_price_data(self):
-        """Remove rows and columns with excessive NaN values from price data."""
-        # Remove columns (tickers) with any NaN values
+    def preprocess_price_data(self): # TODO: Consolidate validate_prices into this to form one validation function
+        # initial preprocessing to remove dates with NaN prices
         valid_cols = self.price_data.columns[~self.price_data.isna().any()]
         removed_tickers = set(self.price_data.columns) - set(valid_cols)
 
         if len(removed_tickers) > 0:
             print(f"Preprocessing: Removed {len(removed_tickers)} tickers with NaN prices")
             self.price_data = self.price_data[valid_cols]
-
-        # Remove rows (dates) with any NaN values
         initial_rows = len(self.price_data)
         self.price_data = self.price_data.dropna(axis=0, how='any')
         removed_rows = initial_rows - len(self.price_data)
@@ -109,6 +106,7 @@ class Broker():
             print(f"Preprocessing: Removed {removed_rows} dates with NaN prices")
 
     def validate_prices(self, date, tickers):
+        # extra layer of validation
         if isinstance(tickers, dict):
             valid_tickers = {}
             for ticker, value in tickers.items():
@@ -141,6 +139,7 @@ class Broker():
             'holdings': self.holdings,
             'cash': self.total_cash
         }
+        
     def get_portfolio_value(self, date):
         value = self.total_cash
         for ticker, shares in self.holdings.items():
