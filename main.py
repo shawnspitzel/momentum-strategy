@@ -1,8 +1,8 @@
 import pandas as pd
 import cProfile
 import pstats
-from strategy import MomentumStrategy
-from backtester import BacktestEngine
+from src.strategy import MomentumStrategy
+from src.backtester import BacktestEngine
 
 def execute():
     initial_capital = 100_000

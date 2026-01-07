@@ -1,4 +1,5 @@
-execution.ipynb
+.src/execution.ipynb
+src/execution.ipynb
 __pycache__/
 *.pyc
 .venv/
