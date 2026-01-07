@@ -1,3 +1,5 @@
-strategy.py
-outputs/*
 execution.ipynb
+__pycache__/
+*.pyc
+.venv/
+venv/
