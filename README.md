@@ -8,6 +8,5 @@ This project contains the following two components:
 In order to run this project, run the following commands:
 ```
 pip install requirements.txt
-cd src
 python main.py
 ```
